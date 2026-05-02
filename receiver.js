@@ -12,6 +12,7 @@ const reconnect = document.getElementById("reconnect");
 let peer;
 let conn;
 let hasEnabledAudio = false;
+let hasStream = false;
 
 function setSignal(text, ok = false) {
   signalStatus.textContent = text;
@@ -23,13 +24,14 @@ function setStream(text, ok = false) {
   streamDot.classList.toggle("ok", ok);
 }
 
-function connect() {
+function setupPeer() {
+  if (peer && !peer.destroyed) return;
+
   if (!senderPeerId) {
     setSignal("Missing peer ID. Scan the QR code from the PC.", false);
     return;
   }
 
-  if (peer) peer.destroy();
   peer = new Peer(undefined, {
     debug: 1,
     config: {
@@ -38,14 +40,14 @@ function connect() {
   });
 
   peer.on("open", () => {
-    setSignal("Connected to signalling. Joining PC...", true);
-    conn = peer.connect(senderPeerId);
-    conn.on("open", () => setSignal("Connected to PC streamer", true));
+    setSignal("Connected to signalling. Tap Enable audio and connect.", true);
   });
 
   peer.on("call", (call) => {
     call.answer();
+    setStream("Waiting for audio call", false);
     call.on("stream", async (stream) => {
+      hasStream = true;
       remoteAudio.srcObject = stream;
       setStream("Audio stream received", true);
       if (hasEnabledAudio) {
@@ -57,7 +59,10 @@ function connect() {
         }
       }
     });
-    call.on("close", () => setStream("Audio call closed", false));
+    call.on("close", () => {
+      hasStream = false;
+      setStream("Audio call closed", false);
+    });
   });
 
   peer.on("error", (error) => {
@@ -65,15 +70,66 @@ function connect() {
   });
 }
 
+function openDataConnection() {
+  if (!peer || peer.destroyed || !senderPeerId) return;
+  if (conn && conn.open) {
+    try {
+      conn.send({ type: "receiver-ready" });
+    } catch {}
+    return;
+  }
+
+  conn = peer.connect(senderPeerId, { reliable: true });
+  conn.on("open", () => {
+    setSignal("Connected to PC streamer", true);
+    if (!hasStream) setStream("Waiting for audio call", false);
+    try {
+      conn.send({ type: "receiver-ready" });
+    } catch {}
+  });
+  conn.on("close", () => {
+    setSignal("Disconnected. Tap Reconnect.", false);
+  });
+  conn.on("error", (error) => {
+    setSignal(`Connection error: ${error.type || error.message}`, false);
+  });
+}
+
+function startConnect() {
+  setupPeer();
+  if (!peer) return;
+
+  if (peer.open) {
+    openDataConnection();
+  } else {
+    peer.once
+      ? peer.once("open", openDataConnection)
+      : peer.on("open", openDataConnection);
+  }
+}
+
 enableAudio.addEventListener("click", async () => {
   hasEnabledAudio = true;
-  if (!peer || peer.destroyed) connect();
+  if (!peer || peer.destroyed) {
+    setSignal("Connecting...", false);
+    setStream("Tap Enable audio and connect", false);
+  }
+  startConnect();
   try {
     await remoteAudio.play();
   } catch {}
 });
 
-reconnect.addEventListener("click", connect);
+reconnect.addEventListener("click", () => {
+  if (peer) {
+    try { peer.destroy(); } catch {}
+  }
+  conn = undefined;
+  hasStream = false;
+  setSignal("Reconnecting...", false);
+  setStream("Tap Enable audio and connect", false);
+  startConnect();
+});
 
-connect();
-
+setSignal("Tap Enable audio and connect", false);
+setStream("Tap Enable audio and connect", false);

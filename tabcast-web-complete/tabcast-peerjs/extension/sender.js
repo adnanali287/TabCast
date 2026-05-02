@@ -13,11 +13,13 @@ const statusLog = document.getElementById("statusLog");
 const monitorPc = document.getElementById("monitorPc");
 
 let peer;
-let call;
 let stream;
 let audioContext;
 let receiverUrl = "";
 let peerId = "";
+
+const dataConnections = new Map();
+const activeCalls = new Map();
 
 selectedTabTitle.textContent = tabTitle;
 
@@ -60,8 +62,42 @@ function saveReceiverUrl() {
   }
 }
 
+function callReceiver(remotePeerId) {
+  if (!peer || peer.destroyed) return;
+  if (!stream) {
+    log(`Phone ${remotePeerId} connected. Will call after capture starts.`);
+    return;
+  }
+  const existing = activeCalls.get(remotePeerId);
+  if (existing) {
+    try { existing.close(); } catch {}
+  }
+  const call = peer.call(remotePeerId, stream);
+  if (!call) {
+    log(`Could not start call to ${remotePeerId}.`, "error");
+    return;
+  }
+  activeCalls.set(remotePeerId, call);
+  call.on("close", () => {
+    if (activeCalls.get(remotePeerId) === call) activeCalls.delete(remotePeerId);
+  });
+  call.on("error", (error) => {
+    log(`Call error to ${remotePeerId}: ${error.type || error.message}`, "error");
+  });
+  log(`Audio call sent to ${remotePeerId}.`, "ok");
+}
+
+function callAllReceivers() {
+  if (!stream) return;
+  for (const [remotePeerId, conn] of dataConnections) {
+    if (conn.open) callReceiver(remotePeerId);
+  }
+}
+
 function setupPeer() {
   if (peer) peer.destroy();
+  dataConnections.clear();
+  activeCalls.clear();
   peerId = `tabcast-${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
   peer = new Peer(peerId, {
     debug: 1,
@@ -80,12 +116,41 @@ function setupPeer() {
   });
 
   peer.on("connection", (conn) => {
-    conn.on("open", () => {
-      log("iPhone receiver connected.", "ok");
+    const remotePeerId = conn.peer;
+    dataConnections.set(remotePeerId, conn);
+
+    const handleReady = () => {
       if (stream) {
-        call = peer.call(conn.peer, stream);
-        log("Audio call sent to iPhone.", "ok");
+        callReceiver(remotePeerId);
+      } else {
+        log(`Phone ${remotePeerId} connected. Will call after capture starts.`);
       }
+    };
+
+    conn.on("open", () => {
+      log(`iPhone receiver ${remotePeerId} connected.`, "ok");
+      handleReady();
+    });
+
+    conn.on("data", (data) => {
+      if (data && typeof data === "object" && data.type === "receiver-ready") {
+        log(`Receiver ${remotePeerId} signalled ready.`, "ok");
+        handleReady();
+      }
+    });
+
+    conn.on("close", () => {
+      dataConnections.delete(remotePeerId);
+      const call = activeCalls.get(remotePeerId);
+      if (call) {
+        try { call.close(); } catch {}
+        activeCalls.delete(remotePeerId);
+      }
+      log(`Receiver ${remotePeerId} disconnected.`);
+    });
+
+    conn.on("error", (error) => {
+      log(`Receiver ${remotePeerId} connection error: ${error.type || error.message}`, "error");
     });
   });
 
@@ -135,13 +200,17 @@ async function startTabCapture() {
     startCapture.disabled = true;
     stopCapture.disabled = false;
     log("Tab audio capture started. Start playback in the source tab.", "ok");
+    callAllReceivers();
   } catch (error) {
     log(`Capture failed: ${error.message}`, "error");
   }
 }
 
 function stopTabCapture() {
-  if (call) call.close();
+  for (const [, call] of activeCalls) {
+    try { call.close(); } catch {}
+  }
+  activeCalls.clear();
   if (stream) {
     for (const track of stream.getTracks()) track.stop();
     stream = null;
@@ -170,4 +239,3 @@ chrome.storage?.local?.get?.("receiverUrl", (result) => {
     log("Paste your GitHub Pages receiver URL.");
   }
 });
-
