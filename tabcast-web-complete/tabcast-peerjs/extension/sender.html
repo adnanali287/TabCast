@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TabCast Streamer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="sender-shell">
+      <section class="panel" aria-labelledby="title">
+        <div class="brand large">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M7 19v-6h5l7-6v18l-7-6H7Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" />
+            <path d="M23 12c1.4 1.1 2 2.4 2 4s-.6 2.9-2 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+          </svg>
+          <div>
+            <p class="eyebrow">TabCast web hosted</p>
+            <h1 id="title">Stream this tab’s audio</h1>
+          </div>
+        </div>
+
+        <div class="selected-tab">
+          <span>Selected tab</span>
+          <strong id="selectedTabTitle">Loading...</strong>
+        </div>
+
+        <label class="field">
+          Receiver page URL
+          <input id="receiverBase" type="url" placeholder="https://yourname.github.io/tabcast-receiver/" />
+        </label>
+
+        <div class="actions">
+          <button id="saveReceiver" type="button" class="secondary">Save receiver URL</button>
+          <button id="startCapture" type="button" class="primary">Start tab capture</button>
+          <button id="stopCapture" type="button" class="danger" disabled>Stop</button>
+        </div>
+
+        <div class="grid">
+          <section class="card" aria-labelledby="phone-title">
+            <h2 id="phone-title">Open on iPhone</h2>
+            <div id="qrWrap" class="qr-empty">Enter your hosted receiver URL, then start capture.</div>
+            <a id="receiverLink" href="#" target="_blank" rel="noopener noreferrer">Receiver link will appear here</a>
+          </section>
+
+          <section class="card" aria-labelledby="status-title">
+            <h2 id="status-title">Status</h2>
+            <ol id="statusLog" class="status-log" aria-live="polite"></ol>
+          </section>
+        </div>
+
+        <label class="monitor">
+          <input id="monitorPc" type="checkbox" />
+          Also play captured audio on this PC
+        </label>
+      </section>
+    </main>
+    <script src="./peerjs.min.js"></script>
+    <script src="./qrcode.js"></script>
+    <script src="./sender.js"></script>
+  </body>
+</html>
+

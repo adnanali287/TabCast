@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "TabCast to iPhone - Web Hosted",
+  "version": "2.0.0",
+  "description": "Capture browser tab audio and stream it to an iPhone receiver page using WebRTC.",
+  "permissions": ["activeTab", "tabs", "tabCapture", "storage"],
+  "host_permissions": ["https://0.peerjs.com/*", "wss://0.peerjs.com/*", "https://*.github.io/*"],
+  "action": {
+    "default_title": "TabCast",
+    "default_popup": "popup.html"
+  }
+}

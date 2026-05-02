@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TabCast Receiver</title>
+    <meta name="description" content="Receive browser tab audio from TabCast on your iPhone." />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card" aria-labelledby="title">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="M11 29V19h7l9-8v26l-9-8h-7Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round" />
+            <path d="M33 18c2 1.7 3 3.7 3 6s-1 4.3-3 6" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+            <path d="M38 13c3.4 3.1 5 6.7 5 11s-1.6 7.9-5 11" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+          </svg>
+        </div>
+        <p class="eyebrow">TabCast receiver</p>
+        <h1 id="title">Listen through your iPhone</h1>
+        <p class="lede">Tap the button below, then start playback in the browser tab on the PC.</p>
+        <div class="status-stack" aria-live="polite">
+          <div class="status-row"><span class="dot" id="signalDot"></span><span id="signalStatus">Waiting for room...</span></div>
+          <div class="status-row"><span class="dot" id="streamDot"></span><span id="streamStatus">No audio yet</span></div>
+        </div>
+        <audio id="remoteAudio" controls playsinline></audio>
+        <button id="enableAudio" class="primary" type="button">Enable audio and connect</button>
+        <button id="reconnect" class="secondary" type="button">Reconnect</button>
+      </section>
+    </main>
+    <script src="./peerjs.min.js"></script>
+    <script src="./receiver.js"></script>
+  </body>
+</html>
+
